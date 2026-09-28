@@ -1,0 +1,34 @@
+#!/bin/sh
+## Danilinux 2.2 — build & install the native 3D Pinball: Space Cadet engine
+## (open-source decompilation of the original, running the original XP game data)
+
+set -e
+
+SRC=/usr/local/src
+
+echo "=== [danilinux] installing build tools (removed again after compiling) ==="
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential cmake libsdl2-dev libsdl2-mixer-dev
+
+echo "=== [danilinux] compiling SpaceCadetPinball engine ==="
+rm -rf /tmp/scp-build
+mkdir -p /tmp/scp-build
+tar xf "$SRC/SpaceCadetPinball-src.tar.gz" -C /tmp/scp-build --strip-components=1
+cd /tmp/scp-build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel "$(nproc)"
+install -m 0755 build/SpaceCadetPinball /usr/local/bin/SpaceCadetPinball
+cd /
+rm -rf /tmp/scp-build
+
+echo "=== [danilinux] installing original Space Cadet game data ==="
+mkdir -p /usr/local/share/spacecadet
+unzip -o -q "$SRC/SpaceCadet-data.zip" -d /usr/local/share/spacecadet/
+ls -la /usr/local/share/spacecadet/Pinball/ | head -5
+
+echo "=== [danilinux] removing build tools again ==="
+apt-get purge -y --autoremove cmake gcc g++ make \
+    libsdl2-dev libsdl2-mixer-dev build-essential || true
+
+echo "=== [danilinux] Space Cadet ready ==="

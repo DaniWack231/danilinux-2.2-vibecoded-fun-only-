@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=3D Pinball: Space Cadet
+Comment=The original 3D Pinball from Windows XP, running natively
+Exec=/usr/local/bin/spacecadet
+Icon=/usr/share/pixmaps/danilinux/spacecadet.png
+Terminal=false
+Categories=Game;ArcadeGame;
+StartupNotify=true

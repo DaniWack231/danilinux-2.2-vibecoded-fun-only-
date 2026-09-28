@@ -1,0 +1,6 @@
+---
+type:       "job"
+name:       "danilinux-finalize"
+interface:  "process"
+command:    "/usr/share/calamares/helpers/calamares-danilinux-finalize"
+timeout:    600

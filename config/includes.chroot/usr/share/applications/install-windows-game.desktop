@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install Windows Game (Wine)
+Comment=Install and play Windows games like Plants vs. Zombies and Peggle
+Exec=/usr/local/bin/install-windows-game
+Icon=wine
+Terminal=false
+Categories=Game;Emulator;
+StartupNotify=true

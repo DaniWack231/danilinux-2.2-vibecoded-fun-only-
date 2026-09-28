@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=About Danilinux
+Comment=What's inside Danilinux 2.2 and how to use it
+Exec=mousepad /usr/share/doc/danilinux/README.md
+Icon=/usr/share/pixmaps/danilinux/danilinux-logo.png
+Terminal=false
+Categories=System;Documentation;
+StartupNotify=true

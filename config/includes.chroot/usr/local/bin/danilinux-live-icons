@@ -1,0 +1,29 @@
+#!/bin/sh
+## Danilinux 2.2 - live-session desktop icons
+## Puts the "Install Danilinux" icon and friends on the desktop of the live
+## session only. On an installed system this script exits silently.
+
+# only in the live session
+if [ ! -e /run/live/medium ] && [ ! -e /run/initramfs/live ]; then
+    exit 0
+fi
+
+DESKTOP=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
+mkdir -p "$DESKTOP"
+
+trust() {  # make an XFCE desktop launcher trusted so it launches without warning
+    gio set --type=string "$1" metadata::trusted true 2>/dev/null
+    gio set --type=string "$1" "metadata::xfce-exe-checksum" \
+        "$(sha256sum "$1" | cut -f1 -d' ')" 2>/dev/null
+    touch "$1"
+}
+
+for entry in danilinux-install spacecadet install-windows-game danilinux-help; do
+    if [ -f "/usr/share/applications/${entry}.desktop" ]; then
+        cp "/usr/share/applications/${entry}.desktop" "$DESKTOP/"
+        chmod +x "$DESKTOP/${entry}.desktop"
+        trust "$DESKTOP/${entry}.desktop"
+    fi
+done
+
+exit 0

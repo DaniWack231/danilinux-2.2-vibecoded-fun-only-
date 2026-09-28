@@ -1,0 +1,27 @@
+#!/bin/sh
+## Danilinux 2.2 — self-heal permissions of shipped files
+## (git and zip uploads can lose exec bits / ownership; this makes sure the
+##  image is correct no matter how the kit travelled)
+
+set -e
+
+echo "=== [danilinux] fixing ownership + modes of shipped files ==="
+
+chown root:root /etc/sudoers.d/90-danilinux-live 2>/dev/null || true
+chmod 0440 /etc/sudoers.d/90-danilinux-live 2>/dev/null || true
+
+chmod 0755 /usr/local/bin/spacecadet \
+           /usr/local/bin/install-windows-game \
+           /usr/local/bin/danilinux-wallpapers \
+           /usr/local/bin/danilinux-install \
+           /usr/local/bin/danilinux-live-icons \
+           /usr/local/bin/danilinux-compositor 2>/dev/null || true
+
+chmod 0755 /usr/share/calamares/helpers/* 2>/dev/null || true
+
+chown -R root:root /etc/skel 2>/dev/null || true
+chmod 0755 /etc/xdg/autostart/danilinux-live-icons.desktop \
+           /etc/xdg/autostart/danilinux-compositor.desktop 2>/dev/null || true
+chmod 0644 /usr/share/fonts/truetype/selawik/*.ttf 2>/dev/null || true
+
+echo "=== [danilinux] permissions ok ==="

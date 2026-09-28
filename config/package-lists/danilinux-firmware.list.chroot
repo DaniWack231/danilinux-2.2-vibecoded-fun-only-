@@ -1,0 +1,11 @@
+# Danilinux 2.2 — hardware firmware (for real-metal installs; VMware doesn't need it)
+# The GitHub Actions "slim" build removes this list to shrink the ISO.
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-brcm80211
+intel-microcode
+amd64-microcode

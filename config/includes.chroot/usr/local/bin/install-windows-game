@@ -1,0 +1,88 @@
+#!/bin/bash
+## Danilinux 2.2 - "Install Windows Game" (Wine helper)
+## Made for Plants vs. Zombies, Peggle and other PopCap / Windows classics.
+## Creates a dedicated 32-bit Wine prefix, runs the game's setup .exe,
+## and offers to put a launcher on the desktop afterwards.
+
+set -u
+
+PREFIX="$HOME/Games/Windows"
+DESKTOP="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
+mkdir -p "$DESKTOP" "$PREFIX"
+
+export WINEPREFIX="$PREFIX"
+export WINEARCH=win32
+export WINEDEBUG=-all
+
+exe_file=$(zenity --file-selection --title="Pick the game's setup file (.exe)" \
+    --file-filter="Setup programs | *.exe *.msi *.EXE *.MSI" \
+    --file-filter="All files | *") || exit 0
+
+if [ -z "$exe_file" ]; then exit 0; fi
+
+# --- first run: prepare the prefix ---------------------------------------
+if [ ! -d "$PREFIX/drive_c" ]; then
+    zenity --progress --title="Preparing Windows games area" \
+        --text="Creating a Wine prefix (first run only)..." --pulsate \
+        --timeout=90 2>/dev/null &
+    PROG_PID=$!
+    wineboot -u >/dev/null 2>&1 || wineboot >/dev/null 2>&1 || true
+    # Arial and friends make PopCap menus look right (needs internet)
+    winetricks -q corefonts >/dev/null 2>&1 || true
+    kill $PROG_PID 2>/dev/null
+    wait $PROG_PID 2>/dev/null
+fi
+
+# --- run the installer ----------------------------------------------------
+cd "$(dirname "$exe_file")"
+wine start /unix "$exe_file"
+
+# --- afterwards: offer a desktop launcher ----------------------------------
+mapfile -t exes < <(find "$PREFIX/drive_c" -iname '*.exe' 2>/dev/null \
+    | grep -viE 'unins|unwise|setup|installer|crashreport' \
+    | sort | head -40)
+
+if [ ${#exes[@]} -eq 0 ]; then
+    zenity --info --title="Installer finished" \
+        --text="The installer has finished.\nYou can also run .exe files directly:\nright-click -> Open With Wine." 2>/dev/null || true
+    exit 0
+fi
+
+zenity --question --title="Game installed" \
+    --text="Installation finished.\n\nWould you like to create a desktop launcher for your game?" \
+    --ok-label="Yes, pick the game .exe" --cancel-label="No thanks" 2>/dev/null || exit 0
+
+rows=()
+for e in "${exes[@]}"; do rows+=(FALSE "$e"); done
+
+game_exe=$(zenity --list --title="Choose the game program" \
+    --text="Which program starts the game?" \
+    --height=420 --width=760 --radiolist \
+    --column="Pick" --column="Program" "${rows[@]}") || exit 0
+
+[ -z "$game_exe" ] && exit 0
+
+game_name=$(basename "$game_exe" | sed 's/\.[Ee][Xx][Ee]$//')
+cat > "$DESKTOP/${game_name}.desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=${game_name}
+Comment=Windows game (Wine)
+Exec=env WINEPREFIX="$PREFIX" WINEARCH=win32 wine "$game_exe"
+Icon=wine
+Terminal=false
+StartupNotify=true
+EOF
+chmod +x "$DESKTOP/${game_name}.desktop"
+# mark as trusted for XFCE
+gio set --type=string "$DESKTOP/${game_name}.desktop" \
+    metadata::trusted true 2>/dev/null || true
+gio set --type=string "$DESKTOP/${game_name}.desktop" \
+    "metadata::xfce-exe-checksum" \
+    "$(sha256sum "$DESKTOP/${game_name}.desktop" | cut -d' ' -f1)" 2>/dev/null || true
+touch "$DESKTOP/${game_name}.desktop"
+
+zenity --info --title="Launcher created" \
+    --text="Double-click \"${game_name}\" on your desktop to play!" 2>/dev/null || true
+exit 0

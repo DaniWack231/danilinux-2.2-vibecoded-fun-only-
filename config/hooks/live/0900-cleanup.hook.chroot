@@ -1,0 +1,41 @@
+#!/bin/sh
+## Danilinux 2.2 — final cleanup inside the chroot (ISO size + tidiness)
+##
+## Also guarantees the "Install Debian" branding can never appear:
+## Debian's calamares-settings-debian package (pulled in by recommends)
+## ships an "Install Debian" desktop icon and its own /etc/calamares
+## settings - we remove all of it so ONLY "Install Danilinux" exists.
+
+set -e
+
+echo "=== [danilinux] cleanup: making sure only 'Install Danilinux' exists ==="
+# calamares-settings-debian is NOT in our package lists and calamares does not
+# recommend it, but if it ever snuck in, strip every trace of Debian branding:
+# its desktop icon, its branding component and the d-i launcher entry.
+rm -f /usr/share/applications/calamares-install-debian.desktop \
+      /usr/share/applications/install-debian.desktop \
+      /usr/share/applications/debian-installer-launcher.desktop 2>/dev/null || true
+rm -rf /etc/calamares/branding/debian 2>/dev/null || true
+
+echo "=== [danilinux] cleanup: removing installer .debs and build leftovers ==="
+rm -rf /usr/local/src/danilinux-debs
+rm -f  /usr/local/src/SpaceCadet-data.zip
+rm -f  /usr/local/src/danilinux-visuals.tar.gz
+
+echo "=== [danilinux] cleanup: apt ==="
+apt-get clean
+
+echo "=== [danilinux] cleanup: logs and caches ==="
+rm -rf /var/log/*.gz /var/log/*.old /var/log/*.log 2>/dev/null || true
+rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+rm -rf /tmp/* /var/tmp/* 2>/dev/null || true
+
+echo "=== [danilinux] cleanup: dpkg ==="
+rm -f /var/lib/dpkg/updates/* 2>/dev/null || true
+
+echo "=== [danilinux] making sure skel is owned correctly ==="
+chown -R root:root /etc/skel
+chmod 755 /etc/skel
+find /etc/skel -name '*.desktop' -exec chmod 755 {} + 2>/dev/null || true
+
+echo "=== [danilinux] cleanup done ==="

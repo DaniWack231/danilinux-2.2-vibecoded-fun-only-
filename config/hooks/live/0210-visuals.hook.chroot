@@ -1,0 +1,29 @@
+#!/bin/sh
+## Danilinux 2.2 — install the Aero glass visual theme
+## Extracts the consolidated visuals tarball (xfwm4 theme, GTK theme,
+## taskbar glass, wallpapers, pixmaps icons, Calamares branding).
+
+set -e
+
+TARBALL=/usr/local/src/danilinux-visuals.tar.gz
+
+if [ ! -f "$TARBALL" ]; then
+    echo "!! danilinux-visuals.tar.gz missing - cannot install the Aero theme!" >&2
+    exit 1
+fi
+
+echo "=== [danilinux] unpacking the Aero glass theme, wallpapers and branding ==="
+tar -xzf "$TARBALL" -C /
+
+# sanity check
+if [ ! -d /usr/share/themes/Danilinux-Aero/xfwm4 ]; then
+    echo "!! theme extraction failed - /usr/share/themes/Danilinux-Aero missing!" >&2
+    exit 1
+fi
+if [ ! -f /usr/share/pixmaps/danilinux/taskbar-glass.png ]; then
+    echo "!! taskbar glass missing!" >&2
+    exit 1
+fi
+
+echo "=== [danilinux] Aero visuals installed ==="
+exit 0

@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# Danilinux 2.2 — post-install finalization
+# Removes live-only bits from the installed system and writes clean apt sources.
+# Pattern based on calamares-settings-debian helpers (GPL-2.0+).
+#
+
+CHROOT=$(mount | grep proc | grep calamares | awk '{print $3}' | sed -e "s#/proc##g")
+RELEASE="trixie"
+
+if [ -z "$CHROOT" ]; then
+    echo "danilinux-finalize: no calamares chroot found, skipping"
+    exit 0
+fi
+
+echo "danilinux-finalize: cleaning live-only configuration from target..."
+
+# 1. Live autologin must not leak into the installed system
+rm -f "$CHROOT/etc/lightdm/lightdm.conf.d/70-danilinux-live-autologin.conf"
+rmdir --ignore-fail-on-non-empty "$CHROOT/etc/lightdm/lightdm.conf.d" 2>/dev/null || true
+
+# 2. Passwordless sudo was only for the live session
+rm -f "$CHROOT/etc/sudoers.d/90-danilinux-live"
+
+# 3. Installer bits are not needed on the installed system
+rm -f  "$CHROOT/usr/share/applications/danilinux-install.desktop"
+rm -f  "$CHROOT/usr/local/bin/danilinux-install"
+rm -f  "$CHROOT/usr/local/bin/danilinux-live-icons"
+rm -f  "$CHROOT/etc/xdg/autostart/danilinux-live-icons.desktop"
+rm -rf "$CHROOT/etc/calamares" \
+       "$CHROOT/usr/lib/calamares/modules" \
+       "$CHROOT/usr/share/calamares/helpers" 2>/dev/null || true
+
+# 3b. Belt & braces: no "Install Debian" entries may exist on the target
+rm -f  "$CHROOT/usr/share/applications/calamares-install-debian.desktop" \
+       "$CHROOT/usr/share/applications/install-debian.desktop" \
+       "$CHROOT/usr/share/applications/debian-installer-launcher.desktop" 2>/dev/null || true
+rm -rf "$CHROOT/etc/calamares/branding/debian" 2>/dev/null || true
+
+# 3c. Installed system boot menu says Danilinux, not Debian
+if grep -q '^GRUB_DISTRIBUTOR=' "$CHROOT/etc/default/grub" 2>/dev/null; then
+    sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR=Danilinux/' "$CHROOT/etc/default/grub"
+else
+    echo 'GRUB_DISTRIBUTOR=Danilinux' >> "$CHROOT/etc/default/grub"
+fi
+
+# 4. Clean apt sources for the installed system
+#    (keep the Google-Chrome and Steam repo files their packages installed)
+rm -f "$CHROOT"/etc/apt/sources.list.d/base.list 2>/dev/null || true
+rm -f "$CHROOT"/etc/apt/sources.list.d/${RELEASE}.list 2>/dev/null || true
+rm -f "$CHROOT"/etc/apt/sources.list.d/${RELEASE}.sources 2>/dev/null || true
+rm -f "$CHROOT"/etc/apt/sources.list.d/debian.sources 2>/dev/null || true
+
+cat > "$CHROOT/etc/apt/sources.list" << EOF
+# Danilinux 2.2 (Debian 13 base) - package sources
+deb http://deb.debian.org/debian ${RELEASE} main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian ${RELEASE}-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security ${RELEASE}-security main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian ${RELEASE}-backports main contrib non-free non-free-firmware
+EOF
+
+echo "danilinux-finalize: done."
+exit 0

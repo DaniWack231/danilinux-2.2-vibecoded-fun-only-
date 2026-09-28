@@ -1,0 +1,29 @@
+#!/bin/sh
+## Danilinux 2.2 — rebrand the generated bootloader menus (grub)
+## Works whether live-build runs the hook from the build root or inside binary/
+
+set -e
+
+echo "=== [danilinux] rebranding bootloader menu entries ==="
+
+patch_cfg() {
+    [ -f "$1" ] || return 0
+    sed -i \
+        -e 's/Debian GNU\/Linux/Danilinux 2.2/g' \
+        -e 's/Debian live/Danilinux 2.2/g' \
+        -e 's/Debian Live/Danilinux 2.2/g' \
+        -e 's/Debian/Danilinux/g' \
+        "$1" || true
+    echo "patched: $1"
+}
+
+for cfg in \
+    binary/boot/grub/grub.cfg \
+    binary/boot/grub/loopback.cfg \
+    ./boot/grub/grub.cfg \
+    ./boot/grub/loopback.cfg
+do
+    patch_cfg "$cfg"
+done
+
+exit 0

@@ -1,0 +1,15 @@
+# Danilinux 2.2 — games
+supertux
+supertuxkart
+neverball
+extremetuxracer
+pinball
+pacman4console
+njam
+chromium-bsu
+frozen-bubble
+lbreakout2
+
+# runtime libs for the native 3D Pinball: Space Cadet engine
+libsdl2-2.0-0
+libsdl2-mixer-2.0-0

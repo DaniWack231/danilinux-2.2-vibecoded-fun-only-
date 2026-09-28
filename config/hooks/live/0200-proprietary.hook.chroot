@@ -1,0 +1,48 @@
+#!/bin/sh
+## Danilinux 2.2 — Chrome + Steam (i386 GL fix) + Wine (PvZ / Peggle / Windows .exe)
+## Runs inside the chroot during ISO build.
+
+set -e
+
+echo "=== [danilinux] enabling i386 multiarch (Steam & Wine 32-bit support) ==="
+dpkg --add-architecture i386
+apt-get update
+
+echo "=== [danilinux] installing 32-bit graphics stack (fixes Steam not opening) ==="
+apt-get install -y --no-install-recommends \
+    libgl1:i386 \
+    libegl1:i386 \
+    libgl1-mesa-dri:i386 \
+    libglx-mesa0:i386 \
+    libvulkan1:i386 \
+    libsdl2-2.0-0:i386
+
+DEBS=/usr/local/src/danilinux-debs
+
+echo "=== [danilinux] Google Chrome (default browser) ==="
+if [ -f "$DEBS/google-chrome-stable_current_amd64.deb" ]; then
+    dpkg -i "$DEBS/google-chrome-stable_current_amd64.deb" || apt-get -f install -y
+else
+    echo "!! Chrome .deb missing - run ./fetch-assets.sh before building!" >&2
+    exit 1
+fi
+
+echo "=== [danilinux] Steam ==="
+if [ -f "$DEBS/steam_latest.deb" ]; then
+    dpkg -i "$DEBS/steam_latest.deb" || apt-get -f install -y
+else
+    echo "!! Steam .deb missing - run ./fetch-assets.sh before building!" >&2
+    exit 1
+fi
+
+echo "=== [danilinux] Wine (run PvZ, Peggle and other Windows games) ==="
+apt-get install -y --no-install-recommends \
+    wine \
+    wine64 \
+    wine32:i386 \
+    winetricks \
+    winbind \
+    cabextract \
+    fonts-wine
+
+echo "=== [danilinux] proprietary bits done ==="

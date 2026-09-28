@@ -1,0 +1,15 @@
+# Danilinux 2.2 — installer (Calamares) + bootloader bits for offline install
+calamares
+squashfs-tools
+btrfs-progs
+pkexec
+cryptsetup
+grub2
+grub2-common
+grub-pc
+grub-pc-bin
+grub-efi-amd64
+grub-efi-amd64-bin
+grub-efi-amd64-signed
+shim-signed
+efibootmgr

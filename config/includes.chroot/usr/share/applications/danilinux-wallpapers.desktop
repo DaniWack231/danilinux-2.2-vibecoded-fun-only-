@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Change Wallpaper
+Comment=Switch between the bundled Aero wallpapers
+Exec=/usr/local/bin/danilinux-wallpapers
+Icon=preferences-desktop-wallpaper
+Terminal=false
+Categories=Settings;DesktopSettings;X-XFCE-SettingsDialog;X-XFCE-PersonalSettings;
+StartupNotify=true

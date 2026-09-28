@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Danilinux Aero Compositor
+Comment=Vista Aero glass effects (transparency and blur)
+Exec=/usr/local/bin/danilinux-compositor
+Terminal=false
+NoDisplay=true

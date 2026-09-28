@@ -1,0 +1,30 @@
+#!/bin/sh
+## Danilinux 2.2 — Aero glass compositor launcher with graceful fallbacks
+##
+## Order of attempts:
+##   1. picom with the GLX backend  (full glass: blur + transparency)
+##   2. picom with the legacy software backend (transparency, no blur)
+##   3. xfwm4's own built-in compositor (light compositing, always works)
+## This keeps the desktop looking right even in VMs without 3D acceleration.
+
+if pgrep -x picom >/dev/null 2>&1; then
+    exit 0
+fi
+
+# 1. full Aero glass (GLX + dual-kawase blur)
+if picom --config /etc/xdg/danilinux-picom.conf >/dev/null 2>&1; then
+    exit 0
+fi
+
+# 2. software fallback (blur unavailable, glass transparency still on)
+if picom --config /etc/xdg/danilinux-picom.conf --legacy-backends >/dev/null 2>&1; then
+    exit 0
+fi
+
+# 3. last resort: let xfwm4 composite by itself
+if command -v xfconf-query >/dev/null 2>&1; then
+    xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s true 2>/dev/null \
+        || xfconf-query -c xfwm4 -p /general/use_compositing -s true 2>/dev/null \
+        || true
+fi
+exit 0

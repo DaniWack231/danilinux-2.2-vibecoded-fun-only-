@@ -1,0 +1,45 @@
+# Danilinux 2.2 — Vista Aero desktop (XFCE)
+xfce4
+xfce4-terminal
+xfce4-whiskermenu-plugin
+xfce4-power-manager
+xfce4-goodies
+thunar
+thunar-archive-plugin
+gvfs
+gvfs-backends
+network-manager
+network-manager-gnome
+bluez
+blueman
+pipewire
+pipewire-alsa
+pipewire-audio
+wireplumber
+pavucontrol
+lightdm
+lightdm-gtk-greeter
+
+# Aero glass stack (2.2): compositor with blur (Selawik fonts ship as files below)
+picom
+
+# fallback theme kept for safety
+greybird-gtk-theme
+elementary-xfce-icon-theme
+fonts-dejavu
+fonts-liberation
+fonts-noto-color-emoji
+xdg-user-dirs
+xdg-utils
+mousepad
+ristretto
+xarchiver
+zenity
+plymouth
+gparted
+mesa-utils
+
+# VMware / VirtualBox guest comfort
+open-vm-tools
+open-vm-tools-desktop
+xserver-xorg-video-vmware

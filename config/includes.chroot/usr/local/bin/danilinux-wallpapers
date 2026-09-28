@@ -1,0 +1,49 @@
+#!/bin/bash
+## Danilinux 2.2 - wallpaper switcher
+## Shows the bundled Aero wallpapers and applies the chosen one.
+
+DIR=/usr/share/backgrounds/danilinux
+CHANNEL=xfce4-desktop
+
+mapfile -t files < <(ls "$DIR"/*.jpg "$DIR"/*.png 2>/dev/null | sort)
+[ ${#files[@]} -gt 0 ] || { zenity --error --text="No wallpapers found in $DIR" 2>/dev/null; exit 1; }
+
+pretty() {
+    case "$1" in
+        *aero-aurora.jpg)      echo "Aero Aurora (default)";;
+        *aero-ice.jpg)         echo "Aero Ice (new in 2.2)";;
+        *aero-twilight.jpg)    echo "Aero Twilight (new in 2.2)";;
+        *aero-blue.jpg)        echo "Aero Blue";;
+        *aero-green.jpg)       echo "Aero Green";;
+        *aero-purple.jpg)      echo "Aero Purple";;
+        *aero-red.jpg)         echo "Aero Red";;
+        *aero-black.jpg)       echo "Aero Black (Business)";;
+        *vista-light.jpg)      echo "Aero Light (Home Basic)";;
+        *danilinux-aurora.jpg) echo "Danilinux (signature)";;
+        *) basename "$1";;
+    esac
+}
+
+rows=()
+for f in "${files[@]}"; do
+    rows+=(FALSE "$(pretty "$f")" "$f")
+done
+
+choice=$(zenity --list --title="Danilinux Wallpapers" \
+    --text="Pick a new look for your desktop" \
+    --height=420 --width=560 --radiolist \
+    --column="Pick" --column="Wallpaper" --column="File" --hide-column=3 \
+    "${rows[@]}") || exit 0
+
+[ -z "$choice" ] && exit 0
+
+# apply to every monitor/workspace backdrop property xfconf knows about
+for prop in $(xfconf-query -c "$CHANNEL" -l 2>/dev/null | grep 'last-image$'); do
+    xfconf-query -c "$CHANNEL" -p "$prop" -s "$choice" 2>/dev/null \
+        || xfconf-query -c "$CHANNEL" -p "$prop" -n -t string -s "$choice" 2>/dev/null
+done
+for prop in $(xfconf-query -c "$CHANNEL" -l 2>/dev/null | grep 'image-style$'); do
+    xfconf-query -c "$CHANNEL" -p "$prop" -s 5 2>/dev/null || true
+done
+
+exit 0

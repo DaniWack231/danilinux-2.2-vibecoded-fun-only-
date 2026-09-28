@@ -1,0 +1,42 @@
+#!/bin/sh
+## Danilinux 2.2 — icon & desktop database refresh + SuperTux icon defence
+
+set -e
+
+echo "=== [danilinux] refreshing icon caches ==="
+for dir in /usr/share/icons/*; do
+    [ -d "$dir" ] || continue
+    if [ -f "$dir/index.theme" ]; then
+        gtk-update-icon-cache -q -t -f "$dir" 2>/dev/null || true
+    fi
+done
+
+echo "=== [danilinux] refreshing desktop database ==="
+update-desktop-database -q /usr/share/applications 2>/dev/null || true
+
+echo "=== [danilinux] making sure the SuperTux icon exists (v1 bug fix) ==="
+# The panel/menu launchers reference Icon=supertux2. If the hicolor theme
+# somehow lacks it, repair it from any icon the supertux package shipped.
+if ! find /usr/share/icons/hicolor -name 'supertux2*' 2>/dev/null | grep -q .; then
+    echo "supertux2 icon missing from hicolor - repairing..."
+    SRC_ICON=$(find /usr/share -name 'supertux2*.png' -o -name 'supertux2*.svg' 2>/dev/null | head -1)
+    if [ -n "$SRC_ICON" ]; then
+        for size in 16 22 24 32 36 48 64 72 96 128 256; do
+            mkdir -p "/usr/share/icons/hicolor/${size}x${size}/apps"
+            cp "$SRC_ICON" "/usr/share/icons/hicolor/${size}x${size}/apps/supertux2.png" 2>/dev/null || true
+        done
+        mkdir -p /usr/share/icons/hicolor/scalable/apps
+        cp "$SRC_ICON" /usr/share/icons/hicolor/scalable/apps/supertux2.svg 2>/dev/null || true
+        gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+    else
+        echo "WARNING: no supertux icon found anywhere - check the supertux package" >&2
+    fi
+else
+    echo "supertux icon OK"
+fi
+
+echo "=== [danilinux] making sure Steam/Chrome menu entries are visible ==="
+# refresh caches once more in case packages installed icons late
+update-desktop-database -q /usr/share/applications 2>/dev/null || true
+
+exit 0

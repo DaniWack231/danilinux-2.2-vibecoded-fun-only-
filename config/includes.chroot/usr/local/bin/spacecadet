@@ -1,0 +1,26 @@
+#!/bin/bash
+## Danilinux 2.2 - 3D Pinball: Space Cadet (original)
+## Runs the open-source SpaceCadetPinball engine with the original
+## Windows XP game data. Each user gets their own writable copy so
+## high scores and settings are saved.
+
+set -e
+
+ENGINE=/usr/local/bin/SpaceCadetPinball
+DATA_SRC=/usr/local/share/spacecadet/Pinball
+DATA_DIR="$HOME/.local/share/SpaceCadetPinball"
+
+if [ ! -x "$ENGINE" ]; then
+    zenity --error --title="3D Pinball: Space Cadet" \
+        --text="The SpaceCadetPinball engine is missing.\nPlease reinstall Danilinux." 2>/dev/null \
+        || echo "SpaceCadetPinball engine missing." >&2
+    exit 1
+fi
+
+if [ ! -f "$DATA_DIR/PINBALL.DAT" ]; then
+    mkdir -p "$DATA_DIR"
+    cp -a "$DATA_SRC/." "$DATA_DIR/"
+fi
+
+cd "$DATA_DIR"
+exec "$ENGINE" "$@"

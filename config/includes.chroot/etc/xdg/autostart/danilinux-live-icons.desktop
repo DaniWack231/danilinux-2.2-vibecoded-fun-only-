@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Hidden=false
+X-GNOME-Autostart-enabled=true
+
+Name=Danilinux live desktop icons
+Comment=Show the Install Danilinux icon in the live session
+Exec=/usr/local/bin/danilinux-live-icons
+Terminal=false
+NoDisplay=true

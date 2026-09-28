@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install Danilinux
+GenericName=System Installer
+Comment=Install Danilinux 2.2 permanently to your disk
+Exec=/usr/local/bin/danilinux-install
+Icon=/usr/share/pixmaps/danilinux/install-danilinux.png
+Terminal=false
+Categories=System;
+StartupWMClass=calamares
+StartupNotify=True
