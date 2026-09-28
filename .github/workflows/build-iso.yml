@@ -1,0 +1,101 @@
+name: Build Danilinux 2.2 ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_firmware:
+        description: "Include hardware firmware (bigger ISO, works on real PCs)"
+        type: boolean
+        default: true
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout kit
+        uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h /
+
+      - name: Install live-build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends live-build wget curl unzip ca-certificates
+
+      - name: Fetch Chrome + Steam debs
+        run: sh fetch-assets.sh
+
+      - name: Ensure executable bits survived the trip
+        run: |
+          chmod +x auto/config *.sh
+          chmod +x config/hooks/live/*.hook.chroot config/hooks/binary/*.hook.binary
+          chmod +x config/includes.chroot/usr/local/bin/* config/includes.chroot/usr/share/calamares/helpers/*
+
+      - name: Optionally drop firmware (slim build)
+        if: ${{ inputs.include_firmware == false }}
+        run: rm -f config/package-lists/danilinux-firmware.list.chroot
+
+      - name: Customise GRUB theme
+        run: |
+          if [ ! -d config/bootloaders/grub ]; then
+            sudo cp -a /usr/share/live/build/bootloaders/grub config/bootloaders/
+          fi
+          cp assets/grub-splash.png config/bootloaders/grub/splash.png
+          sudo sed -i -e 's/Debian GNU\/Linux/Danilinux 2.2/g' -e 's/Debian live/Danilinux 2.2/g' \
+              config/bootloaders/grub/grub.cfg || true
+
+      - name: Build ISO
+        shell: bash
+        run: |
+          set -eo pipefail
+          sudo lb clean --purge || true
+          sudo lb build 2>&1 | tail -300
+          ls -lh danilinux-2.2-amd64.hybrid.iso
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: danilinux-2.2-amd64-iso
+          path: danilinux-2.2-amd64.hybrid.iso
+          compression-level: 0
+          retention-days: 14
+
+      - name: Publish ISO to GitHub Releases (easy download)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v2.2
+        run: |
+          sha256sum danilinux-2.2-amd64.hybrid.iso > SHA256SUMS.txt
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes || true
+            git push --delete origin "$TAG" || true
+          fi
+          gh release create "$TAG" \
+            danilinux-2.2-amd64.hybrid.iso SHA256SUMS.txt \
+            --title "Danilinux 2.2 — Aero Edition" \
+            --notes "Danilinux 2.2 (Aero Edition)
+
+          Vista-Aero-styled Debian 13 remix with the Aero glass desktop (real
+          transparency + blur), Calamares installer, Chrome, Steam, Wine and
+          3D Pinball Space Cadet.
+
+          **Download:** \`danilinux-2.2-amd64.hybrid.iso\` (click it below)
+
+          **VMware settings:** 4 GB RAM, 2+ CPU, 25-40 GB disk, enable
+          *Accelerate 3D graphics* in Display settings (needed for the glass
+          effects and Steam/games).
+
+          Live session auto-logs in. To install to disk, double-click
+          **Install Danilinux** on the desktop." \
+            --latest || echo "release step failed - ISO still available as artifact"
