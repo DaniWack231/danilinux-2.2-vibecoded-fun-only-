@@ -1,0 +1,128 @@
+name: Build Danilinux 2.2 ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_firmware:
+        description: "Include hardware firmware (bigger ISO, works on real PCs)"
+        type: boolean
+        default: true
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout kit
+        uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h /
+
+      - name: Install build tools (Debian 13's exact live-build)
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            debootstrap cpio wget curl unzip ca-certificates
+          # GitHub runners are Ubuntu, but this kit needs Debian 13's live-build
+          # (Ubuntu's package behaves differently). live-build is a tiny
+          # arch-independent package of shell scripts, so we install Debian's:
+          wget -qO /tmp/live-build.deb \
+            "https://deb.debian.org/debian/pool/main/l/live-build/live-build_20250505+deb13u1_all.deb" || {
+            LB=$(wget -qO- "https://deb.debian.org/debian/pool/main/l/live-build/" \
+                 | grep -oE 'live-build_[0-9][^"]*_all\.deb' | sort -uV | tail -1)
+            wget -qO /tmp/live-build.deb "https://deb.debian.org/debian/pool/main/l/live-build/$LB"
+          }
+          sudo dpkg -i /tmp/live-build.deb
+          # belt & braces: make sure debootstrap knows Debian 13 "trixie"
+          if [ ! -e /usr/share/debootstrap/scripts/trixie ]; then
+            wget -qO /tmp/debootstrap.deb \
+              "https://deb.debian.org/debian/pool/main/d/debootstrap/debootstrap_1.0.141_all.deb"
+            sudo dpkg -i /tmp/debootstrap.deb
+          fi
+          dpkg-query -W live-build debootstrap
+
+      - name: Fetch Chrome + Steam debs
+        run: sh fetch-assets.sh
+
+      - name: Ensure executable bits survived the trip
+        run: |
+          chmod +x auto/config *.sh
+          chmod +x config/hooks/live/*.hook.chroot config/hooks/binary/*.hook.binary
+          chmod +x config/includes.chroot/usr/local/bin/* config/includes.chroot/usr/share/calamares/helpers/*
+
+      - name: Fix bootloader + image name in auto/config
+        run: |
+          # 'grub' alone is not a valid value in modern live-build
+          # (valid: grub-pc, grub-efi, syslinux, grub-legacy) and live-build
+          # appends '-amd64' to the image name itself.
+          sed -i 's/--bootloader grub/--bootloaders grub-pc,grub-efi/' auto/config
+          sed -i 's/--image-name danilinux-2.2-amd64/--image-name danilinux-2.2/' auto/config
+          grep -E "bootloaders|image-name" auto/config
+
+      - name: Optionally drop firmware (slim build)
+        if: ${{ inputs.include_firmware == false }}
+        run: rm -f config/package-lists/danilinux-firmware.list.chroot
+
+      - name: Customise GRUB theme (splash image)
+        run: |
+          # live-build overlays config/bootloaders/grub-pc/ onto the
+          # generated /boot/grub — the official way to set the splash.
+          mkdir -p config/bootloaders/grub-pc
+          cp assets/grub-splash.png config/bootloaders/grub-pc/splash.png
+
+      - name: Build ISO
+        shell: bash
+        run: |
+          set -eo pipefail
+          sudo lb clean --purge || true
+          sudo lb build 2>&1 | tail -300
+          ls -lh danilinux-2.2-amd64.hybrid.iso
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: danilinux-2.2-amd64-iso
+          path: danilinux-2.2-amd64.hybrid.iso
+          compression-level: 0
+          retention-days: 14
+
+      - name: Publish ISO to GitHub Releases (easy download)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v2.2
+        run: |
+          sha256sum danilinux-2.2-amd64.hybrid.iso > SHA256SUMS.txt
+          # replace any previous release so "Releases" always has the newest ISO
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes || true
+            git push --delete origin "$TAG" || true
+          fi
+          gh release create "$TAG" \
+            danilinux-2.2-amd64.hybrid.iso SHA256SUMS.txt \
+            --title "Danilinux 2.2 — Aero Edition" \
+            --notes "Danilinux 2.2 (Aero Edition)
+
+          Vista-Aero-styled Debian 13 remix with the Aero glass desktop (real
+          transparency + blur), Calamares installer, Chrome, Steam, Wine and
+          3D Pinball Space Cadet.
+
+          **Download:** \`danilinux-2.2-amd64.hybrid.iso\` (click it below)
+
+          **VMware settings:** 4 GB RAM, 2+ CPU, 25-40 GB disk, enable
+          *Accelerate 3D graphics* in Display settings (needed for the glass
+          effects and Steam/games).
+
+          Live session auto-logs in. To install to disk, double-click
+          **Install Danilinux** on the desktop." \
+            --latest || echo "release step failed - ISO still available as artifact"
